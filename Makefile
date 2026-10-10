@@ -2,7 +2,8 @@ TARGET := genitor
 CC := gcc
 CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto \
 	  -ffast-math -pedantic -fPIE -Iinc/    \
-	  -fno-stack-protector
+	  -fno-stack-protector -fno-builtin \
+	  -nostdlib
 ASFLAGS := -fPIE
 LDFLAGS := -nostdlib -pie -flto -Wl,-e,_start
 
@@ -30,3 +31,9 @@ build/%.o: src/%.s
 
 clean:
 	rm -rf build $(TARGET)
+
+test : $(TARGET)
+	cp init env/initramfs
+	cd env
+	./run
+
