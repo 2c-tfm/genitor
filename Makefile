@@ -1,29 +1,32 @@
-CC = gcc
-CFLAGS = -ggdb -Wall -Wextra -Werror -O3 -flto -ffast-math -pedantic -nostdlib
-NAME = genitor
-SRC = $(wildcard src/*.c)
-OBJ = $(SRC:src/%.c=build/%.o)
-INC = inc/
+TARGET := genitor
+CC := gcc
+CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto \
+	  -ffast-math -pedantic -fPIE -Iinc/    \
+	  -fno-stack-protector
+ASFLAGS := -fPIE
+LDFLAGS := -nostdlib -pie -flto -Wl,-e,_start
 
-all: build $(NAME)
+CSRC := $(wildcard src/*.c)
+SSRC := $(wildcard src/*.s)
+
+OBJS := $(patsubst src/%.c,build/%.o,$(CSRC)) \
+        $(patsubst src/%.s,build/%.o,$(SSRC))
+
+.PHONY: all clear
+
+all: build $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(LDFLAGS) -Iinc/ $(OBJS) -o $(TARGET)
+
+build:
+	mkdir -p $@
 
 build/%.o: src/%.c
-	$(CC) $(CFLAGS) -I$(INC) $< -c -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
-build: 
-	if [ ! -d "build/" ]; then \
-		mkdir build; \
-	fi
+build/%.o: src/%.s
+	$(CC) $(ASFLAGS) -c $< -o $@
 
-$(NAME): $(OBJ)
-	$(CC) $(CFLAGS) -I$(INC) $(OBJ) -o $(NAME)
-
-clean: 
-	rm -rf build/
-
-fclean: clean
-	rm -rf $(NAME)
-
-re: fclean all
-
-.SILENT: build fclean clean
+clean:
+	rm -rf build $(TARGET)

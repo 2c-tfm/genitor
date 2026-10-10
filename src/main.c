@@ -1,5 +1,6 @@
 #include <genitor.h>
+#include <syscall.h>
 
 int main(void) {
-	puts("hello world");
+	return 0;
 }
