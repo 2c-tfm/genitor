@@ -1,7 +1,12 @@
 #include <genitor.h>
+#include <string.h>
 #include <syscall.h>
+#include <init.h>
+#include <syslog.h>
 
 int main(void) {
-	puts(1, "init system up and running");
+	init_env();
+	printf("init system up and running");
+	while(1);
 	return 0;
 }

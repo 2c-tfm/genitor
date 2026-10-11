@@ -1,9 +1,41 @@
 #ifndef UNISTD_H
 #define UNISTD_H
 
+#include "types.h"
+
+struct stat {
+    uint64_t st_dev;
+    uint64_t st_ino;
+    uint64_t st_nlink;
+
+    uint32_t st_mode;
+    uint32_t st_uid;
+    uint32_t st_gid;
+    uint32_t __pad0;
+
+    uint64_t st_rdev;
+    int64_t  st_size;
+    int64_t  st_blksize;
+    int64_t  st_blocks;
+
+    int64_t  st_atime;
+    uint64_t st_atime_nsec;
+
+    int64_t  st_mtime;
+    uint64_t st_mtime_nsec;
+
+    int64_t  st_ctime;
+    uint64_t st_ctime_nsec;
+
+    int64_t  __unused[3];
+};
+
+
 int read (uint32_t fd, char *buf, uint64_t count);
 int write (uint32_t fd, const char *buf, uint64_t count);
 int open (const char *filename, int32_t flags);
+int stat(const char *fpath, struct stat *statbuf);
+int fstat(int fd, struct stat *statbuf);
 int mount (const char *src, const char *target, 
 		const char *fstype, uint64_t flags, 
 		const void *data);
@@ -11,6 +43,13 @@ int close(int fd);
 int dup2(int oldfd, int newfd);
 pid_t fork(void);
 int execve(const char *path, const char *argv[], const char *envp);
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fildes, uint64_t off);
+int mprotect(void *addr, size_t len, int prot);
+int munmap(void *addr, size_t len);
+void *mremap(void *p, size_t old_size, size_t new_size, int flags);
+
+ssize_t readlinkat(int dirfd, const char *path, char *buf, uint64_t size);
 
 // taken from glibc2.44 bits/fcntl.h:24
 /* File access modes for `open' and `fcntl'.  */
@@ -28,5 +67,18 @@ int execve(const char *path, const char *argv[], const char *envp);
 #define	O_NONBLOCK	0x0004	/* Non-blocking I/O.  */
 
 typedef int pid_t;
+
+// taken from glibc bits/mman.h:32
+#define PROT_NONE  0x0
+#define PROT_READ  0x1
+#define PROT_WRITE 0x2
+#define PROT_EXEC  0x4
+#define MAP_SHARED    0x01
+#define MAP_PRIVATE   0x02
+#define MAP_TYPE      0x0f
+#define MAP_FIXED     0x10
+#define MAP_ANONYMOUS 0x20
+#define MAP_ANON      MAP_ANONYMOUS
+#define MAP_FAILED    ((void *) -1)
 
 #endif

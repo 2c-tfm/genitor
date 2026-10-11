@@ -2,7 +2,12 @@
 #include <syscall.h>
 #include <string.h>
 
-void puts(int fd, const char *s) {
+void puts(const char *s) {
+	write(1, s, strlen(s));
+	write(1, "\n", 1);
+}
+
+void fputs(int fd, const char *s) {
 	write(fd, s, strlen(s));
 	write(fd, "\n", 1);
 }
@@ -72,8 +77,7 @@ static uint32_t print_sint(int fd, int32_t n) {
 	return (total);
 }
 
-uint32_t printf(int fd, const char *fmt, ...) {
-	va_list args;
+uint32_t vprintf(int fd, const char *fmt, va_list args) {
 	char *fmtit;
 	uint32_t total = 0;
 
@@ -81,8 +85,6 @@ uint32_t printf(int fd, const char *fmt, ...) {
 	fmtit = (char *) fmt;
 	if (fmtit == NULL)
 		return (0);
-
-	va_start(args, fmt);
 
 	while (*fmtit != '\0') {
 		if (*fmtit != '%') {
@@ -109,6 +111,36 @@ uint32_t printf(int fd, const char *fmt, ...) {
 		fmtit++;
 
 	}
+
+	return total;
+}
+
+uint32_t printf(const char *fmt, ...) {
+	va_list args;
+	uint32_t total = 0;
+
+
+	if (fmt == NULL)
+		return (0);
+
+	va_start(args, fmt);
+	total = vprintf(1, fmt, args);
 	va_end(args);
 	return (total);
 }
+
+uint32_t fprintf(int fd, const char *fmt, ...) {
+	va_list args;
+	uint32_t total = 0;
+
+
+	if (fmt == NULL)
+		return (0);
+
+	va_start(args, fmt);
+	total = vprintf(fd, fmt, args);
+	va_end(args);
+	return (total);
+}
+
+

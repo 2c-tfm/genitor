@@ -51,3 +51,31 @@ int mount (const char *src, const char *target,
 		const void *data) {
 	return syscall(SYS_MOUNT, src, target, fstype, flags, data);
 }
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fildes, uint64_t off) {
+	return (void *)syscall(SYS_MMAP, addr, len, prot, flags, fildes, off);
+}
+
+int mprotect(void *addr, size_t len, int prot) {
+	return syscall(SYS_MPROTECT, addr, len, prot);
+}
+
+int munmap(void *addr, size_t len) {
+	return syscall(SYS_MUNMAP, addr, len);
+}
+
+void *mremap(void *p, size_t oldsize, size_t newsize, int flags) {
+	return (void *) syscall(SYS_MREMAP,p, oldsize, newsize, flags);
+}
+
+int stat(const char *fpath, struct stat *statbuf){
+	return syscall(SYS_STAT, fpath, statbuf);
+}
+
+int fstat(int fd, struct stat *statbuf){
+	return syscall(SYS_FSTAT, fd, statbuf);
+}
+
+ssize_t readlinkat(int dirfd, const char *path, char *buf, uint64_t size) {
+	return syscall(SYS_READLINKAT, dirfd, path, buf, size);
+}
