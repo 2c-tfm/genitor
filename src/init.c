@@ -1,11 +1,13 @@
 #include <genitor.h>
 #include <fs.h>
+#include <fstab.h>
 #include <malloc.h>
 #include <disk.h>
 #include <string.h>
 #include <parse.h>
 #include <file.h>
 #include <syscall.h>
+
 
 static int init_dev_mounts(void) {
 	
@@ -57,16 +59,15 @@ static int partition_healthcheck() {
 		return -1;
 	}
 
-	// dbg
-	// int fd = open("/flag.txt", O_RDONLY);
-	// if (fd < 0) {
-	// 	printf("cannot read the file\n");
-	// 	return (-1);
-	// }
-	// char buf[0x100];
-	// read(fd, buf, fdsize(fd));
-	// printf("file cont [%s]\n", buf);
-	// dbg
+	fstab = fstab_populate();
+	if (fstab == NULL)
+		puts("Mounting fstab partitions failed");
+
+	// end of health check
+	if (root_part != NULL) {
+		umount2(root_part, 0);
+		free(root_part);
+	}
 
 	return (0);
 	

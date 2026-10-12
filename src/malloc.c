@@ -39,7 +39,7 @@ static void malloc_init(void){
 	}
 	arena->heap_size = mtunes[TUN_MALLOC_HINC];
 	arena->wild = (void *) ((size_t) arena + sizeof(malloc_state));
-	arena->wild->size = (mtunes[TUN_MALLOC_HINC] - sizeof(malloc_state)) | PREV_MASK;
+	arena->wild->size = (mtunes[TUN_MALLOC_HINC] - sizeof(malloc_state) - CHNK_HDR_SZ) | PREV_MASK;
 	for (int i = 0; i < NFAST; i++)
 		arena->fastbin[i] = NULL;
 	for (int i = 0; i < BINS; i++)
@@ -266,7 +266,7 @@ void *malloc(size_t size){
 	selected = arena->wild;
 	arena->wild = (chunk *) ((size_t) arena->wild + chunksize(size));
 	arena->wild->size = ((sizenomask(selected->size) - chunksize(size)) | PREV_MASK);
-	selected->size = chunksize(size) | (selected->size & ALL_MASKS);
+	selected->size = size | (selected->size & ALL_MASKS);
 	if (mtunes[TUN_BZERO] == true){
 		bzero(chunk2mem(selected), size);
 	}

@@ -8,10 +8,10 @@ struct chunk;
 # define SIZE_SZ sizeof(size_t)
 # define DBG
 # define NFAST 10
-# define BINS 0x7f				// large, unsorted and small bins
+# define BINS 128
 # define NSMALL_BINS (int)(BINS / 2)		
 # define NLARGE_BINS (int)(BINS / 2) 
-# define UNSORTED_IDX (BINS - 1)			
+# define UNSORTED_IDX 127
 # define CHUNK_ALLIGNEMENT (SIZE_SZ * 2)
 # define MALLOC_ALIGN (CHUNK_ALLIGNEMENT - 1)
 # define MIN_CHUNK_SIZE (sizeof(chunk) - CHUNK_ALLIGNEMENT)

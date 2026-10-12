@@ -83,3 +83,7 @@ ssize_t readlinkat(int dirfd, const char *path, char *buf, uint64_t size) {
 off_t lseek(int fildes, off_t offset, int whence) {
 	return syscall(SYS_LSEEK, fildes, offset, whence);
 }
+
+int umount2(const char * target, int flags) {
+	return syscall(SYS_UMOUNT2, target, flags);
+}

@@ -21,9 +21,16 @@ void bzero(void *s, uint32_t n);
 int atoi(const char *str);
 
 #define SKIP_WHITESPACE(p) \
-    do { \
-        while (*(p) == ' ' || *(p) == '\t') \
-            (p)++; \
-    } while (0)
+	do { \
+		while (*(p) == ' ' || *(p) == '\t') \
+			(p)++; \
+	} while (0)
+
+#define SKIP_LINE(ptr) do { \
+	while (*(ptr) != '\n' && *(ptr) != '\0') \
+		(ptr)++; \
+	if (*(ptr) == '\n') \
+		(ptr)++; \
+	} while (0)
 
 #endif

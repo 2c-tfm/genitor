@@ -21,6 +21,7 @@
 #define SYS_EXECVE	59
 #define SYS_SIGACTION	67
 #define SYS_MOUNT	165
+#define SYS_UMOUNT2	166
 #define SYS_READLINKAT	267
 
 extern long syscall(long nr, ...);

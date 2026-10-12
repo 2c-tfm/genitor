@@ -40,6 +40,7 @@ off_t lseek(int fildes, off_t offset, int whence);
 int mount (const char *src, const char *target, 
 		const char *fstype, uint64_t flags, 
 		const void *data);
+int umount2(const char * target, int flags);
 int close(int fd);
 int dup2(int oldfd, int newfd);
 pid_t fork(void);
