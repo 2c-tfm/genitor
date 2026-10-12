@@ -20,4 +20,10 @@ void bzero(void *s, uint32_t n);
 
 int atoi(const char *str);
 
+#define SKIP_WHITESPACE(p) \
+    do { \
+        while (*(p) == ' ' || *(p) == '\t') \
+            (p)++; \
+    } while (0)
+
 #endif

@@ -33,5 +33,5 @@ clean:
 	rm -rf build $(TARGET)
 
 test : $(TARGET)
-	mv genitor env/initramfs/init
+	mv genitor env/initramfs/
 

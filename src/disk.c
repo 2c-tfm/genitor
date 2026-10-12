@@ -1,9 +1,63 @@
 #include <genitor.h>
+#include <file.h>
 #include <malloc.h>
 #include <syscall.h>
 #include <string.h>
 #include <disk.h>
 
+// is_mounted - given a path it opens /proc/self/mounts then checks if that 
+// 		path has already something mounted into it
+bool is_mounted(const char *path) {
+	int procfd;
+	uint64_t fsize;
+	char *pcontent;
+	char *pcontptr;
+	bool mounted = false;
+
+	// procfd = open("/proc/self/mounts", O_RDONLY);
+	procfd = open("/proc/self/mounts", O_RDONLY);
+	if (procfd < 0)
+		return (-1);
+
+	fsize = fdsize(procfd);
+	pcontent = malloc(fsize + 1);
+	if (pcontent == NULL)
+		return (-1);
+
+	read(procfd, pcontent, fsize);
+	pcontent[fsize] = '\0';
+
+	pcontptr = pcontent;
+	while (*pcontptr != '\0') {
+		SKIP_WHITESPACE(pcontptr);
+		if (*pcontptr == '\0')
+			break;
+
+		while (*pcontptr != ' ' && *pcontptr != '\t' &&  *pcontptr != '\0')
+			pcontptr++;
+
+		if (*pcontptr == '\0')
+			break;
+
+		
+		SKIP_WHITESPACE(pcontptr);
+		if (*pcontptr == '\0')
+			break;
+
+		if (memcmp(path, pcontptr, strlen(path)) == 0) {
+			mounted = true;
+			break;
+		}
+
+		while (*pcontptr != '\n' &&  *pcontptr != '\0')
+			pcontptr++;
+
+		if (*pcontptr == '\n')
+			pcontptr++;
+	}
+	free(pcontent);
+	return mounted;
+}
 
 // normalize_path - litterally normalizes ../ and ./
 static int normalize_path(const char *input, char *output, size_t output_size) {
@@ -137,7 +191,6 @@ char *resolve_disk_location(char *val) {
 		free(fppath);
 		fppath = NULL;
 	}
-	printf("fucking ffpath %s\n", fppath);
 
 	free(fullpath);
 	return (fppath);

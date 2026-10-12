@@ -1,4 +1,5 @@
 #include <genitor.h>
+#include <fs.h>
 #include <malloc.h>
 #include <disk.h>
 #include <string.h>
@@ -6,16 +7,22 @@
 #include <file.h>
 #include <syscall.h>
 
-// TODO: we still need to do checks here for mounting failures
-// this will be done when a logging system is working
 static int init_dev_mounts(void) {
 	
-	if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL) != 0)
-		puts("mount /dev failed");
-	if (mount("proc", "/proc", "proc", 0, NULL) != 0)
-		puts("mount /proc failed");
-	if (mount("sysfs", "/sys", "sysfs", 0, NULL) != 0)
-		puts("mount /sys failed");
+	if (is_mounted("/dev") == false) {
+		if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL) != 0)
+			puts("mount /dev failed");
+	}
+	if (is_mounted("/proc") == false) {
+		if (mount("proc", "/proc", "proc", 0, NULL) != 0)
+			puts("mount /proc failed");
+	}
+
+	if (is_mounted("/sys") == false) {
+		if (mount("sysfs", "/sys", "sysfs", 0, NULL) != 0)
+			puts("mount /sys failed");
+	}
+
 	return 0;
 }
 
@@ -24,13 +31,43 @@ static int init_dev_mounts(void) {
 // 			if it does have all required files to start
 static int partition_healthcheck() {
 	char *uuid_val;
-	char *part_path;
+	char *root_part;
+	PART_FS fs;
 
 	uuid_val = extract_cmdline("root");
-	part_path = resolve_disk_location(uuid_val);
-	(void)part_path;
-
+	root_part = resolve_disk_location(uuid_val);
 	free(uuid_val);
+	if (root_part == NULL){
+		puts("root partition isn't found");
+		return (-1);
+	}
+
+	// mounting the root directory
+	// TODO: for now we take root partition type as ext4 for granted 
+	// it must be checked
+	fs = detect_fs(root_part);
+
+	if (fs == NONE) {
+		puts("cannot detect root partition fs type");
+		return -1;
+	}
+
+	if (mount(root_part, "/", fs_types[fs], MS_RDONLY, NULL) != 0) {
+		printf("mount / failed\n");
+		return -1;
+	}
+
+	// dbg
+	// int fd = open("/flag.txt", O_RDONLY);
+	// if (fd < 0) {
+	// 	printf("cannot read the file\n");
+	// 	return (-1);
+	// }
+	// char buf[0x100];
+	// read(fd, buf, fdsize(fd));
+	// printf("file cont [%s]\n", buf);
+	// dbg
+
 	return (0);
 	
 }
@@ -50,7 +87,11 @@ static int init_syslog() {
 int init_env(void) {
 	init_dev_mounts();
 	init_syslog();
-	partition_healthcheck();
+
+	// if the root is mounted we just skip the checks and mounting
+	if (is_mounted("/") == false) {
+		partition_healthcheck();
+	}
 
 	return (0);
 }

@@ -11,6 +11,7 @@
 #define SYS_CLOSE	3
 #define SYS_STAT	4
 #define SYS_FSTAT	5
+#define SYS_LSEEK	8
 #define SYS_MMAP	9
 #define SYS_MPROTECT	10
 #define SYS_MUNMAP	11

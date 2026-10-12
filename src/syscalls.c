@@ -1,7 +1,7 @@
 #include <genitor.h>
 #include <syscall.h>
 
-int read (uint32_t fd, char *buf, uint64_t count) {
+int read (uint32_t fd, void *buf, uint64_t count) {
 	return syscall(SYS_READ, fd, buf, count);
 }
 
@@ -78,4 +78,8 @@ int fstat(int fd, struct stat *statbuf){
 
 ssize_t readlinkat(int dirfd, const char *path, char *buf, uint64_t size) {
 	return syscall(SYS_READLINKAT, dirfd, path, buf, size);
+}
+
+off_t lseek(int fildes, off_t offset, int whence) {
+	return syscall(SYS_LSEEK, fildes, offset, whence);
 }

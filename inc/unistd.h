@@ -31,11 +31,12 @@ struct stat {
 };
 
 
-int read (uint32_t fd, char *buf, uint64_t count);
+int read (uint32_t fd, void *buf, uint64_t count);
 int write (uint32_t fd, const char *buf, uint64_t count);
 int open (const char *filename, int32_t flags);
 int stat(const char *fpath, struct stat *statbuf);
 int fstat(int fd, struct stat *statbuf);
+off_t lseek(int fildes, off_t offset, int whence);
 int mount (const char *src, const char *target, 
 		const char *fstype, uint64_t flags, 
 		const void *data);
@@ -80,5 +81,9 @@ typedef int pid_t;
 #define MAP_ANONYMOUS 0x20
 #define MAP_ANON      MAP_ANONYMOUS
 #define MAP_FAILED    ((void *) -1)
+
+#define MS_RDONLY 1UL
+
+#define SEEK_SET 0
 
 #endif
