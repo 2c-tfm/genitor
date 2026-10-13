@@ -2,6 +2,11 @@
 #include <syscall.h>
 #include <string.h>
 
+static const char *log_lvl_repr[] = {"SUCCESS", "EMERG", "ERROR", "WARN", 
+	"INFO", "DEBUG"};
+static const char *log_lvl_colors[] = {"\033[0;32m", "\033[41m", "\033[0;31m", 
+	"\033[0;33m", "\033[0;34m", "\033[0;36m"};
+
 void puts(const char *s) {
 	write(1, s, strlen(s));
 	write(1, "\n", 1);
@@ -143,4 +148,157 @@ uint32_t fprintf(int fd, const char *fmt, ...) {
 	return (total);
 }
 
+static void snputc(snprint_ctx *ctx, char c) {
+	if (ctx->size > 0 && ctx->len < ctx->size - 1)
+		ctx->buf[ctx->len] = c;
+
+	ctx->len++;
+}
+
+static void snputs(snprint_ctx *ctx, const char *s) {
+	if (s == NULL)
+		s = "(null)";
+
+	while (*s != '\0')
+		snputc(ctx, *s++);
+}
+
+static void snputd(snprint_ctx *ctx, int n) {
+	char tmp[sizeof(unsigned int) * CHAR_BIT];
+	size_t i = 0;
+	unsigned int value;
+
+	if (n < 0) {
+		snputc(ctx, '-');
+		value = (unsigned int)(-(n + 1)) + 1U;
+	} else {
+		value = (unsigned int)n;
+	}
+
+	do {
+		tmp[i++] = (char)('0' + value % 10U);
+		value /= 10U;
+	} while (value != 0);
+
+	while (i > 0)
+		snputc(ctx, tmp[--i]);
+}
+
+static void snputp(snprint_ctx *ctx, void *p) {
+	static const char hex[] = "0123456789abcdef";
+	char tmp[sizeof(uintptr_t) * 2];
+	uintptr_t value = (uintptr_t)p;
+	size_t i = 0;
+
+	snputs(ctx, "0x");
+
+	do {
+		tmp[i++] = hex[value % 16U];
+		value /= 16U;
+	} while (value != 0);
+
+	while (i > 0)
+		snputc(ctx, tmp[--i]);
+}
+
+int vsnprintf(char *buf, size_t size, const char *fmt, va_list args) {
+	snprint_ctx ctx = {
+		.buf = buf,
+		.size = size,
+		.len = 0
+	};
+
+	if (size > 0 && buf == NULL)
+		return -1;
+
+	if (fmt == NULL) {
+		if (size > 0)
+			buf[0] = '\0';
+		return 0;
+	}
+
+	while (*fmt != '\0') {
+		if (*fmt != '%') {
+			snputc(&ctx, *fmt++);
+			continue;
+		}
+
+		fmt++;
+
+		if (*fmt == '\0') {
+			snputc(&ctx, '%');
+			break;
+		}
+
+		switch (*fmt) {
+		case 's':
+			snputs(&ctx, va_arg(args, char *));
+			break;
+
+		case 'd':
+			snputd(&ctx, va_arg(args, int));
+			break;
+
+		case 'p':
+			snputp(&ctx, va_arg(args, void *));
+			break;
+
+		case '%':
+			snputc(&ctx, '%');
+			break;
+
+		default:
+			snputc(&ctx, '%');
+			snputc(&ctx, *fmt);
+			break;
+		}
+
+		fmt++;
+	}
+
+	if (size > 0)
+		buf[ctx.len < size ? ctx.len : size - 1] = '\0';
+
+	if (ctx.len > INT_MAX)
+		return -1;
+
+	return (int)ctx.len;
+}
+
+int snprintf(char *buf, size_t size, const char *fmt, ...) {
+	va_list args;
+	int ret;
+
+	va_start(args, fmt);
+	ret = vsnprintf(buf, size, fmt, args);
+	va_end(args);
+
+	return ret;
+}
+
+uint32_t log(LOG_LVL log, char *fmt, ...) {
+	va_list args;
+	uint32_t total = 0;
+
+	if (fmt == NULL)
+		return (0);
+
+#ifndef DBG
+	if (log == DEBUG)
+		return (0);
+#endif
+
+	va_start(args, fmt);
+#ifdef LOG_COLOR
+	printf("[%s%s\033[0m] - ", log_lvl_colors[log], log_lvl_repr[log]);
+#else
+	printf("[%s] - ", log_lvl_repr[log]);
+#endif
+	total = vprintf(1, fmt, args);
+	puts("");
+	va_end(args);
+	if (log == EMERG)
+		exit(-1);
+	return (total);
+}
 

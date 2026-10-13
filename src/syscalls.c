@@ -87,3 +87,27 @@ off_t lseek(int fildes, off_t offset, int whence) {
 int umount2(const char * target, int flags) {
 	return syscall(SYS_UMOUNT2, target, flags);
 }
+
+void exit(int status) {
+	syscall(SYS_EXIT, status);
+}
+
+int swapon (const char *path, int swapflags) {
+	return syscall(SYS_SWAPON, path, swapflags);
+}
+
+int finit_module(int fd, const char *param_values, int flags) {
+	return syscall(SYS_FINIT_MODULE, fd, param_values, flags);
+}
+
+int64_t getdents64(int fd, void *dirp, uint32_t count) {
+	return syscall(SYS_GETDENTS64, fd, dirp, count);
+}
+
+int64_t getdents(int fd, char *buf, uint32_t count) {
+	return syscall(SYS_GETDENTS, fd, buf, count);
+}
+
+int openat(int fd, const char *path, int oflag, int mode) {
+	return syscall(SYS_OPENAT, fd, path, oflag, mode);
+}

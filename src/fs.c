@@ -207,12 +207,16 @@ PART_FS detect_fs(const char *path) {
 	if (stat(path, &st) == -1)
 		return NONE;
 
-	if (!S_ISBLK(st.st_mode))
+	if (!S_ISBLK(st.st_mode)) {
+		log(ERROR, "%s is not a block device", path);
 		return NONE;
+	}
 
 	int fd = open(path, O_RDONLY);
-	if (fd == -1)
+	if (fd == -1) {
+		log(ERROR, "cannot open %s", path);
 		return NONE;
+	}
 
 	// detecting
 	while (i < fs_dsize) {

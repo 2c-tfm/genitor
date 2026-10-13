@@ -15,7 +15,7 @@ char *extract_cmdline(const char *key) {
 	size = fsize("/proc/cmdline");
 
 	if (size < 0) {
-		printf("cannot find /proc/cmdline");
+		log(ERROR, "cannot find /proc/cmdline");
 		return (NULL);
 	}
 
@@ -24,7 +24,6 @@ char *extract_cmdline(const char *key) {
 	content = malloc(size + 1);
 
 	if (content == NULL) {
-		printf("Cannot allocate for /proc/cmdline");
 		return (NULL);
 	}
 

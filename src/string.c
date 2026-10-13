@@ -12,6 +12,18 @@ uint32_t strlen(const char *s) {
 	return (i);
 }
 
+uint32_t strnlen(const char *s, uint32_t maxlen) {
+	uint32_t i = 0;
+
+	if (s == NULL)
+		return 0;
+
+	while (i < maxlen && s[i] != '\0')
+		i++;
+
+	return i;
+}
+
 char *strchr(const char *s, int c) {
 	int i;
 
@@ -56,6 +68,18 @@ size_t strlcat(char *dst, const char *src, size_t size) {
 	}
 	dst[dstlength + i] = '\0';
 	return (dstlength + strlen(src));
+}
+
+int strcmp(const char *s1, const char *s2) {
+	size_t i = 0;
+
+	while ((unsigned char)s1[i] == (unsigned char)s2[i]) {
+		if (s1[i] == '\0' || s2[i] == '\0')
+			return 0;
+		i++;
+	}
+
+	return (unsigned char)s1[i] - (unsigned char)s2[i];
 }
 
 int strncmp(const char *s1, const char *s2, size_t n) {

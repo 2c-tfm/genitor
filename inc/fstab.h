@@ -10,6 +10,8 @@ typedef struct fstab_entry {
 } fstab_entry;
 
 fstab_entry *fstab_populate(void);
+void fstab_free(fstab_entry *entry);
+void fstab_mount(fstab_entry *entries);
 
 extern fstab_entry *fstab;
 

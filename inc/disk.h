@@ -7,7 +7,6 @@
 
 #define PATH_MAX 1024
 
-#define AT_FDCWD -100
 
 typedef enum DISK_IDENT {
 	UUID,

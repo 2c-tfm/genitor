@@ -19,6 +19,7 @@ typedef long long          ssize_t;
 
 typedef int			pid_t;
 typedef uint64_t		off_t;
+typedef unsigned long		uintptr_t;
 
 #if !(defined(__STDC_VERSION__) && __STDC_VERSION__ > 202000L)
 typedef _Bool              bool;

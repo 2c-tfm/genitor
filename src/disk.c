@@ -8,24 +8,11 @@
 // is_mounted - given a path it opens /proc/self/mounts then checks if that 
 // 		path has already something mounted into it
 bool is_mounted(const char *path) {
-	int procfd;
-	uint64_t fsize;
 	char *pcontent;
 	char *pcontptr;
 	bool mounted = false;
 
-	// procfd = open("/proc/self/mounts", O_RDONLY);
-	procfd = open("/proc/self/mounts", O_RDONLY);
-	if (procfd < 0)
-		return (-1);
-
-	fsize = fdsize(procfd);
-	pcontent = malloc(fsize + 1);
-	if (pcontent == NULL)
-		return (-1);
-
-	read(procfd, pcontent, fsize);
-	pcontent[fsize] = '\0';
+	pcontent = read_file("/proc/self/mounts");
 
 	pcontptr = pcontent;
 	while (*pcontptr != '\0') {

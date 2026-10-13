@@ -1,5 +1,6 @@
 #include <genitor.h>
 #include <fs.h>
+#include <file.h>
 #include <fstab.h>
 #include <disk.h>
 #include <malloc.h>
@@ -20,8 +21,10 @@ char *fstab_extract_entry(char **fstab_cpptr) {
 	next_ws = fstab_cptr;
 	while (*next_ws != ' ' && *next_ws != '\t' && *next_ws != '\0')	// finding the next white space
 		next_ws++;
-	if (next_ws == fstab_cptr)
+	if (next_ws == fstab_cptr) {
+		log(ERROR, "/etc/fstab is not properly constructed");
 		return (NULL);
+	}
 	entry_size = next_ws - fstab_cptr;
 	char *entry = malloc(entry_size + 1);
 	if (entry == NULL)
@@ -50,30 +53,6 @@ static char *fstab_disk_resolve(char **fstab_cpptr) {
 	return resolved_disk;
 }
 
-// read_fstab - opens and reads fstab in an allocated space
-static char *read_fstab(void) {
-	char *fstab_content = NULL;
-	int32_t fstabfd;
-	uint32_t fstabsize;
-
-	fstabfd = open("/etc/fstab", O_RDONLY);
-	// fstabfd = open("/tmp/fstab", O_RDONLY);
-	if (fstabfd < 0)
-		return NULL;
-	fstabsize = fdsize(fstabfd);
-	fstab_content = malloc(fstabsize + 1);
-	if (fstab_content == NULL)
-		return NULL;
-
-	read(fstabfd, fstab_content, fstabsize);
-	fstab_content[fstabsize] = '\0';
-	close(fstabfd);
-
-
-	return (fstab_content);
-}
-
-
 // fstab_populate - reads /etc/fstab and parses it then returns ouput as a 
 // 			linked list of fstab_entries
 // PS: expects the root directory to be mounted
@@ -83,7 +62,7 @@ fstab_entry *fstab_populate(void) {
 	char *fstab_content = NULL;
 	char *fstab_cptr = NULL;
 
-	fstab_content = read_fstab();
+	fstab_content = read_file("/etc/fstab");
 	fstab_cptr = fstab_content;
 
 	if (fstab_content == NULL)
@@ -130,11 +109,44 @@ fstab_entry *fstab_populate(void) {
 		// skipping to the newline 
 
 		SKIP_LINE(fstab_cptr);
-		printf("shit %s\n", current->path);
 	}
 
 	free(fstab_content);
 	return (head);
 }
 
+void fstab_free(fstab_entry *entry) {
+	fstab_entry *current = entry;
+	fstab_entry *tmp;
 
+	while (current != NULL) {
+		free(current->path);
+		free(current->mount_point);
+		free(current->fstype);
+		free(current->options);
+		tmp = current;
+		current = current->next;
+		free(tmp);
+	}
+}
+
+void fstab_mount(fstab_entry *entries) {
+	fstab_entry *current = entries;
+
+	while (current != NULL) {
+		if (memcmp(current->fstype, "swap", 4) == 0) {
+			swapon(current->path, 0);
+			log(SUCCESS, "Swap activated in %s", current->path);
+		} else {
+			if (mount(current->path, current->mount_point, current->fstype,
+					0, current->options) != 0)
+				log(ERROR, "Failed to mount %s", current->path);
+			else 
+				log(SUCCESS, "Mounted %s to %s", current->path ,
+						current->mount_point);
+		}
+
+		current = current->next;
+	}
+
+}

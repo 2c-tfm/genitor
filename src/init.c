@@ -11,18 +11,19 @@
 
 static int init_dev_mounts(void) {
 	
-	if (is_mounted("/dev") == false) {
-		if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL) != 0)
-			puts("mount /dev failed");
-	}
 	if (is_mounted("/proc") == false) {
 		if (mount("proc", "/proc", "proc", 0, NULL) != 0)
-			puts("mount /proc failed");
+			log(ERROR, "mount /proc failed");
+	}
+
+	if (is_mounted("/dev") == false) {
+		if (mount("devtmpfs", "/dev", "devtmpfs", 0, NULL) != 0)
+			log(ERROR, "mount /dev failed");
 	}
 
 	if (is_mounted("/sys") == false) {
 		if (mount("sysfs", "/sys", "sysfs", 0, NULL) != 0)
-			puts("mount /sys failed");
+			log(ERROR, "mount /sys failed");
 	}
 
 	return 0;
@@ -40,31 +41,29 @@ static int partition_healthcheck() {
 	root_part = resolve_disk_location(uuid_val);
 	free(uuid_val);
 	if (root_part == NULL){
-		puts("root partition isn't found");
+		log(ERROR, "root partition isn't found");
 		return (-1);
 	}
 
-	// mounting the root directory
-	// TODO: for now we take root partition type as ext4 for granted 
-	// it must be checked
 	fs = detect_fs(root_part);
 
 	if (fs == NONE) {
-		puts("cannot detect root partition fs type");
+		log(EMERG, "cannot detect root partition fs type");
 		return -1;
 	}
 
 	if (mount(root_part, "/", fs_types[fs], MS_RDONLY, NULL) != 0) {
-		printf("mount / failed\n");
+		log(EMERG, "mount / failed\n");
 		return -1;
 	}
 
 	fstab = fstab_populate();
 	if (fstab == NULL)
-		puts("Mounting fstab partitions failed");
+		log(ERROR, "Reading fstab partitions failed");
 
 	// end of health check
 	if (root_part != NULL) {
+		log(INFO, "unmounting root partition");
 		umount2(root_part, 0);
 		free(root_part);
 	}
@@ -92,6 +91,12 @@ int init_env(void) {
 	// if the root is mounted we just skip the checks and mounting
 	if (is_mounted("/") == false) {
 		partition_healthcheck();
+	}
+	// mounting all fs
+	if (fstab != NULL) {
+		log(INFO, "mounting fstab partitions");
+		fstab_mount(fstab);
+		fstab_free(fstab);
 	}
 
 	return (0);
