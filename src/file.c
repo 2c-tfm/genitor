@@ -22,10 +22,25 @@ uint64_t fdsize(int fd) {
 	return -1; 
 }
 
+// emerg_read - made for files like in /proc
+static int emerg_read(int fd){
+	char buf[4096];
+	uint32_t rsize = 0;
+	while (true) {
+		uint32_t rval = read(fd, buf, 4096);
+		rsize += rval;
+		if (rval != 0 || rval < 4096) 
+			break;
+	}
+
+	lseek(fd, 0, SEEK_SET);
+	return (rsize);
+}
+
 // read_file - reads a whole file and return an allocated char *
 char *read_file(char *path) {
 	int fd;
-	uint32_t file_size = 0;
+	int32_t file_size = 0;
 	char *fcontent;
 
 	fd = open(path, O_RDONLY);
@@ -35,8 +50,11 @@ char *read_file(char *path) {
 	}
 
 	file_size = fdsize(fd);
-	if (file_size <= 0)
+	if (file_size < 0)
 		return NULL;
+	if (file_size == 0) {
+		file_size = emerg_read(fd);
+	}
 	fcontent = malloc(file_size + 1);
 	read(fd, fcontent, file_size);
 	fcontent[file_size] = '\0';

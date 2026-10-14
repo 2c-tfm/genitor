@@ -13,7 +13,17 @@ SSRC := $(wildcard src/*.s)
 OBJS := $(patsubst src/%.c,build/%.o,$(CSRC)) \
         $(patsubst src/%.s,build/%.o,$(SSRC))
 
-.PHONY: all clear
+PREFIX := /
+DESTDIR ?=
+
+SBIN_DIR    := $(DESTDIR)$(PREFIX)sbin
+ETC_GENITOR := $(DESTDIR)$(PREFIX)etc/genitor
+SV_DIR      := $(ETC_GENITOR)/sv
+RUN_DIR     := $(DESTDIR)$(PREFIX)run/genitor/service
+
+TTY_COUNT = "6"
+
+.PHONY: all clean fclean re install install-init install-services test
 
 all: build $(TARGET)
 
@@ -23,14 +33,52 @@ $(TARGET): $(OBJS)
 build:
 	mkdir -p $@
 
-build/%.o: src/%.c
+build/%.o: src/%.c | build
 	$(CC) $(CFLAGS) -c $< -o $@
 
-build/%.o: src/%.s
+build/%.o: src/%.s | build
 	$(CC) $(ASFLAGS) -c $< -o $@
 
 clean:
-	rm -rf build $(TARGET)
+	rm -rf build
+
+fclean: clean
+	rm -rf $(TARGET)
+
+re: fclean all
+
+install:  install-init install-services
+
+install-init: $(TARGET)
+	install -d -m755 "$(SBIN_DIR)"
+	install -m755 "$(TARGET)" "$(SBIN_DIR)/init"
+
+install-services:
+	install -d -m755 "$(SV_DIR)" "$(RUN_DIR)"
+	@set -e; \
+	n=1; \
+	while [ "$$n" -le "$(TTY_COUNT)" ]; do \
+		svc="$(SV_DIR)/tty$$n"; \
+		install -d -m755 "$$svc"; \
+		printf '%s\n' \
+			'#!/bin/sh' \
+			'' \
+			'tty=$${PWD##*-}' \
+			'' \
+			'[ -r conf ] && . ./conf' \
+			'' \
+			'if [ -x /sbin/getty ] || [ -x /bin/getty ]; then' \
+			'    GETTY=getty' \
+			'elif [ -x /sbin/agetty ] || [ -x /bin/agetty ]; then' \
+			'    GETTY=agetty' \
+			'fi' \
+			'' \
+			'exec setsid "$${GETTY}" $${GETTY_ARGS} "$${tty}" "$${BAUD_RATE}" "$${TERM_NAME}"' \
+			> "$$svc/run"; \
+		chmod 755 "$$svc/run"; \
+		ln -sfn "/etc/genitor/sv/tty$$n" "$(RUN_DIR)/tty$$n"; \
+		n=$$((n + 1)); \
+	done
 
 test : $(TARGET)
 	mv genitor env/initramfs/

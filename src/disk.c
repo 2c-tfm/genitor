@@ -13,6 +13,9 @@ bool is_mounted(const char *path) {
 	bool mounted = false;
 
 	pcontent = read_file("/proc/self/mounts");
+	if (pcontent == NULL) {
+		return false;
+	}
 
 	pcontptr = pcontent;
 	while (*pcontptr != '\0') {

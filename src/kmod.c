@@ -8,7 +8,6 @@
 #include <printf.h>
 #include <string.h>
 
-#define OSRELEASE_SIZE	256
 #define DIR_BUF_SIZE	4096
 
 static char *modules_dep = NULL;
@@ -37,32 +36,6 @@ static int kmod_prepare_modules_dep(const char *modroot) {
 		return -1;
 
 	return 0;
-}
-
-
-static char *resolve_kernel_version(void) {
-	int fd;
-	int fsize;
-	char *release;
-
-	fd = open("/proc/sys/kernel/osrelease", O_RDONLY);
-	if (fd < 0) {
-		log(ERROR, "Cannot figure out kernel version");
-		return NULL;
-	}
-	release = malloc(OSRELEASE_SIZE);
-	if (release == NULL) {
-		close(fd);
-		return NULL;
-	}
-	fsize = read(fd, release, OSRELEASE_SIZE);
-	if (release[fsize - 1] == '\n')
-		release[fsize - 1] = '\0';
-	else 
-		release[fsize] = '\0';
-
-	close(fd);
-	return release;
 }
 
 static int kmod_load_module(const char *path) {
@@ -232,11 +205,13 @@ void kmod_load(void) {
 	char *krelease;
 	uint32_t modspath_len;
 
-	krelease = resolve_kernel_version();
+	krelease = read_file("/proc/sys/kernel/osrelease");
 	if (krelease == NULL) {
-		log(ERROR, "Cannot determine kernel release");
-		return ;
+		log(ERROR, "Cannot figure out kernel version");
+		return;
 	}
+	if (strchr(krelease, '\n') != NULL)
+		*strchr(krelease, '\n') = '\0';
 	log(DEBUG, "krelease %s", krelease);
 	modspath_len = strlen("/lib/modules/") + strlen(krelease) + 2;
 	modspath = malloc(modspath_len + 1);

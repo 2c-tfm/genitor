@@ -9,8 +9,7 @@
 #include <fstab.h>
 
 int main(void) {
-	// init_env();
-	kmod_load();
+	init_env();
 	log(SUCCESS, "init system up and running");
 	while(1);
 	return 0;

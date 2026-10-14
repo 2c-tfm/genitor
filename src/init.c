@@ -1,4 +1,5 @@
 #include <genitor.h>
+#include <kmod.h>
 #include <fs.h>
 #include <fstab.h>
 #include <malloc.h>
@@ -98,6 +99,8 @@ int init_env(void) {
 		fstab_mount(fstab);
 		fstab_free(fstab);
 	}
+
+	kmod_load();
 
 	return (0);
 }
