@@ -231,3 +231,22 @@ int atoi(const char *str) {
 	}
 	return (number * sign);
 }
+
+char *getenv(const char *name)
+{
+    size_t len;
+
+    if (!name || !*name || !environ)
+        return NULL;
+
+    len = strlen(name);
+
+    for (size_t i = 0; environ[i] != NULL; i++) {
+        if (strncmp(environ[i], name, len) == 0 &&
+            environ[i][len] == '=') {
+            return environ[i] + len + 1;
+        }
+    }
+
+    return NULL;
+}

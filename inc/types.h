@@ -24,7 +24,7 @@ typedef unsigned long		uintptr_t;
 #if !(defined(__STDC_VERSION__) && __STDC_VERSION__ > 202000L)
 typedef _Bool              bool;
 #endif
-
+#define SIZE_MAX ((size_t)-1)
 #ifndef true
 #define true               1
 #define false              0

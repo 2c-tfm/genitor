@@ -2,6 +2,7 @@
 #define UNISTD_H
 
 #include "types.h"
+#include "time.h"
 
 struct stat {
     uint64_t st_dev;
@@ -45,12 +46,16 @@ int swapon (const char *path, int swapflags);
 int close(int fd);
 int dup2(int oldfd, int newfd);
 pid_t fork(void);
-int execve(const char *path, const char *argv[], const char *envp);
+int execve(const char *path, const char *argv[], char **envp);
 void exit(int status);
+int chdir(const char *path);
+int kill(pid_t pid, int sig);
+pid_t wait4(pid_t pid, int *wstatus, int options, void *rusage);
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fildes, uint64_t off);
 int mprotect(void *addr, size_t len, int prot);
 int munmap(void *addr, size_t len);
+int nanosleep(struct timespec *req, struct timespec *rmtp);
 void *mremap(void *p, size_t old_size, size_t new_size, int flags);
 
 ssize_t readlinkat(int dirfd, const char *path, char *buf, uint64_t size);
@@ -61,25 +66,31 @@ int openat(int fd, const char *path, int oflag, int mode);
 
 // taken from glibc2.44 bits/fcntl.h:24
 /* File access modes for `open' and `fcntl'.  */
-#define	O_RDONLY	0	/* Open read-only.  */
-#define	O_WRONLY	1	/* Open write-only.  */
-#define	O_RDWR		2	/* Open read/write.  */
-#define	O_CREAT		0x0200	/* Create file if it doesn't exist.  */
-#define	O_EXCL		0x0800	/* Fail if file already exists.  */
-#define	O_TRUNC		0x0400	/* Truncate file to zero length.  */
-#define	O_NOCTTY	0x8000	/* Don't assign a controlling terminal.  */
-#define	O_ASYNC		0x0040	/* Send SIGIO to owner when data is ready.  */
-#define	O_FSYNC		0x0080	/* Synchronous writes.  */
-#define	O_SYNC		O_FSYNC
-#define	O_APPEND	0x0008	/* Writes append to the file.  */
-#define	O_NONBLOCK	0x0004	/* Non-blocking I/O.  */
-#define O_DIRECTORY 0x10000
-#define O_CLOEXEC   0x80000
+#define O_RDONLY    0x0000
+#define O_WRONLY    0x0001
+#define O_RDWR      0x0002
+
+#define O_CREAT     0x0040
+#define O_EXCL      0x0080
+#define O_NOCTTY    0x0100
+#define O_TRUNC     0x0200
+#define O_APPEND    0x0400
+#define O_NONBLOCK  0x0800
+
+#define O_DSYNC     0x001000
+#define O_ASYNC     0x002000
+#define O_SYNC      0x101000
+#define O_FSYNC     O_SYNC
+
+#define O_DIRECT    0x004000
+#define O_DIRECTORY 0x010000
+#define O_NOFOLLOW  0x020000
+#define O_NOATIME   0x040000
+#define O_CLOEXEC   0x080000
 
 #define CHAR_BIT 8
 #define INT_MAX  2147483647
 
-typedef int pid_t;
 
 // taken from glibc bits/mman.h:32
 #define PROT_NONE  0x0

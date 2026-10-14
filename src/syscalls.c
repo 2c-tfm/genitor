@@ -1,5 +1,6 @@
 #include <genitor.h>
 #include <syscall.h>
+#include <time.h>
 
 int read (uint32_t fd, void *buf, uint64_t count) {
 	return syscall(SYS_READ, fd, buf, count);
@@ -25,7 +26,7 @@ pid_t fork(void) {
 	return syscall(SYS_FORK);
 }
 
-int execve(const char *path, const char *argv[], const char *envp) {
+int execve(const char *path, const char *argv[], char **envp) {
 	return syscall(SYS_EXECVE, path, argv, envp);
 }
 
@@ -110,4 +111,29 @@ int64_t getdents(int fd, char *buf, uint32_t count) {
 
 int openat(int fd, const char *path, int oflag, int mode) {
 	return syscall(SYS_OPENAT, fd, path, oflag, mode);
+}
+
+long clock_gettime(struct timespec *ts) {
+	return syscall(SYS_CLOCK_GETTIME, CLOCK_REALTIME, ts);
+}
+
+pid_t waitpid(pid_t pid, int *wstatus, int options) {
+	return syscall(SYS_WAITPID, pid, wstatus, options);
+}
+
+int chdir(const char *path) {
+	return syscall(SYS_CHDIR, path);
+}
+
+int kill(pid_t pid, int sig) {
+    return syscall(SYS_KILL, pid, sig);
+}
+
+pid_t wait4(pid_t pid, int *wstatus, int options, void *rusage) {
+	return syscall(SYS_WAIT4, pid, wstatus, options, rusage);
+}
+
+
+int nanosleep(struct timespec *req, struct timespec *rmtp) {
+	return syscall(SYS_NANOSLEEP, req, rmtp);
 }

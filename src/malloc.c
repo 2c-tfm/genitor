@@ -231,9 +231,12 @@ void *malloc(size_t size){
 	    else
 		    arena->bins[UNSORTED_IDX] = NULL;
 
+	    // paranoia check
+	    if (arena->bins[UNSORTED_IDX] < arena)
+		arena->bins[UNSORTED_IDX] = NULL;
 	    if (arena->bins[UNSORTED_IDX])
 		    arena->bins[UNSORTED_IDX]->bk = NULL;
-	    
+
 	    next_unsorted = arena->bins[UNSORTED_IDX];
 
 	    // add to small bin

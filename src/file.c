@@ -4,7 +4,7 @@
 #include <malloc.h>
 #include <genitor.h>
 
-uint64_t fsize(const char *filename) {
+int64_t fsize(const char *filename) {
 	struct stat st; 
 
 	if (stat(filename, &st) == 0)
@@ -13,7 +13,7 @@ uint64_t fsize(const char *filename) {
 	return -1; 
 }
 
-uint64_t fdsize(int fd) {
+int64_t fdsize(int fd) {
 	struct stat st; 
 
 	if (fstat(fd, &st) == 0)

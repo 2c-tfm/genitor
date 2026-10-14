@@ -1,6 +1,7 @@
 TARGET := genitor
 CC := gcc
-CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto \
+# CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto 
+CFLAGS := -ggdb  -O3 -flto \
 	  -ffast-math -pedantic -fPIE -Iinc/    \
 	  -fno-stack-protector -fno-builtin \
 	  -nostdlib -static
@@ -20,6 +21,7 @@ SBIN_DIR    := $(DESTDIR)$(PREFIX)sbin
 ETC_GENITOR := $(DESTDIR)$(PREFIX)etc/genitor
 SV_DIR      := $(ETC_GENITOR)/sv
 RUN_DIR     := $(DESTDIR)$(PREFIX)run/genitor/service
+SYSLOG_DIR     := $(DESTDIR)$(PREFIX)var/log/syslog
 
 TTY_COUNT = "6"
 
@@ -54,7 +56,7 @@ install-init: $(TARGET)
 	install -m755 "$(TARGET)" "$(SBIN_DIR)/init"
 
 install-services:
-	install -d -m755 "$(SV_DIR)" "$(RUN_DIR)"
+	install -d -m755 "$(SV_DIR)" "$(RUN_DIR)" "$(SYSLOG_DIR)"
 	@set -e; \
 	n=1; \
 	while [ "$$n" -le "$(TTY_COUNT)" ]; do \
@@ -63,14 +65,20 @@ install-services:
 		printf '%s\n' \
 			'#!/bin/sh' \
 			'' \
-			'tty=$${PWD##*-}' \
+			'tty=$$(basename "$$(pwd)")' \
+			'PATH=$${PATH}:/sbin' \
+			'BAUD_RATE=38400' \
+			'TERM_NAME=linux' \
+			'if [ "$${tty}" = "tty1" ]; then' \
+			'	GETTY_ARGS="--noclear"' \
+			'fi' \
 			'' \
 			'[ -r conf ] && . ./conf' \
 			'' \
-			'if [ -x /sbin/getty ] || [ -x /bin/getty ]; then' \
-			'    GETTY=getty' \
-			'elif [ -x /sbin/agetty ] || [ -x /bin/agetty ]; then' \
+			'if [ -x /sbin/agetty ] || [ -x /bin/agetty ]; then' \
 			'    GETTY=agetty' \
+			'elif [ -x /sbin/getty ] || [ -x /bin/getty ]; then' \
+			'    GETTY=getty' \
 			'fi' \
 			'' \
 			'exec setsid "$${GETTY}" $${GETTY_ARGS} "$${tty}" "$${BAUD_RATE}" "$${TERM_NAME}"' \
