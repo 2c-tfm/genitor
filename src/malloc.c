@@ -10,7 +10,8 @@ extern char **environ;
 uint64_t	mtunes[] = {MALLOC_HINC, true, true, false};
 
 
-static void unsortedbin_merge(void);
+static void insert_unsorted(chunk *c);
+static chunk *merge_free_chunk(chunk *c);
 
 static void init_tunables(){
 	uint32_t	i = 0;
@@ -69,23 +70,27 @@ void malloc_consolidate(){
     
 
     while (++i < NFAST){
-	if (arena->fastbin[i] == NULL)
-	    continue;
 	current = arena->fastbin[i];
+	if (current == NULL)
+	    continue;
+
 	arena->fastbin[i] = NULL;		// we don't need that bin anymore
 	while (current != NULL){
 	    next = REVEAL_PTR(&arena->fastbin[i], current->fd);
-	    // inserting to unsorted bins
-	    current->fd = arena->bins[UNSORTED_IDX];
-	    current->bk = NULL;
-	    if (arena->bins[UNSORTED_IDX])
-		arena->bins[UNSORTED_IDX]->bk = current;
-	    arena->bins[UNSORTED_IDX] = current;
-	    // next
+
+	    current = merge_free_chunk(current);
+	    if (nextchunk(current) == arena->wild)  {
+	    	    size_t size = sizenomask(arena->wild->size) + sizenomask(current->size)
+	    	    	    + CHNK_HDR_SZ;
+	    	    arena->wild = current;
+	    	    arena->wild->size = size | (current->size & ALL_MASKS);
+	    } else {
+	    	    insert_unsorted(current);
+	    }
+
 	    current = next;
 	}
     }
-    unsortedbin_merge();
 }
 
 static bool unlink_chunk(chunk *victim, chunk **bin_head, bool protchunk){
@@ -124,35 +129,41 @@ static void unlink_all(chunk *victim){
 	}
 }
 
-static void unsortedbin_merge(void){
-	chunk *it = arena->bins[UNSORTED_IDX];
-	while (it != NULL){
-		// merging the backward chunk, forward chunks will take care of themselves
-		if (!is_prev(it) && it->prev_size != 0){
-			chunk 		*prev_vict = prevchunk(it);
-			uint64_t	nsize;		// new merged chunk size
-			unlink_all(prev_vict);		// unlinking the chunk from it's original bin
-							// to eliminate fragmentation
-			nsize = (sizenomask(prev_vict->size) + sizenomask(it->size) + CHNK_HDR_SZ);
-			prev_vict->size = nsize | (prev_vict->size & ALL_MASKS);
-			if (it->bk != NULL)
-				it->bk->fd = prev_vict;	// linking chunk in unsorted list
-			else 
-				arena->bins[UNSORTED_IDX] = prev_vict;
+static void insert_unsorted(chunk *c) {
+	c->bk = NULL;
+	c->fd = arena->bins[UNSORTED_IDX];
+	if (arena->bins[UNSORTED_IDX])
+		arena->bins[UNSORTED_IDX]->bk = c;
+	arena->bins[UNSORTED_IDX] = c;
+}
 
-			if (it->fd != NULL)
-				it->fd->bk = prev_vict;
+static chunk *merge_free_chunk(chunk *c) {
+	chunk *nxt;
+	size_t size;
 
-			prev_vict->fd = it->fd;
-			prev_vict->bk = it->bk;
-			// updating the next chunk prevsize
-			if (nextchunk(prev_vict) < arena->wild){
-				nextchunk(prev_vict)->prev_size = prev(sizenomask(prev_vict->size));
-			}
-			it = prev_vict;
-		}
-		it = it->fd;
+	size = sizenomask(c->size);
+	if (!is_prev(c) && c->prev_size != 0) {
+		chunk *prev = prevchunk(c);
+		unlink_all(prev);
+		size += sizenomask(prev->size) + CHNK_HDR_SZ;
+		c = prev;
 	}
+	c->size = size | (c->size & ALL_MASKS);
+
+	nxt = nextchunk(c);
+	if (nxt < arena->wild && !is_prev(nextchunk(nxt))) {
+		unlink_all(nxt);
+		size = sizenomask(c->size) + sizenomask(nxt->size) + CHNK_HDR_SZ;
+		c->size = size | (c->size & ALL_MASKS);
+		nxt = nextchunk(c);
+	}
+
+	if (nxt < arena->wild) {
+		nxt->size &= ~PREV_MASK;
+		nxt->prev_size = sizenomask(c->size);
+	}
+
+	return (c);
 }
 
 void *malloc(size_t size){
@@ -202,7 +213,10 @@ void *malloc(size_t size){
 	// we check if we have a chunk that can fill the request from
 	// largebins
 	selected = largebin_head(size);
+	while (selected != NULL && sizenomask(selected->size) < size)
+		selected = selected->fd;
 	if (selected) {
+		unlink_chunk(selected, &arena->bins[largeidx(size)], false);
 		nextchunk(selected)->size |= PREV_MASK;
 		nextchunk(selected)->prev_size = 0;
 		if (mtunes[TUN_BZERO] == true){
@@ -232,8 +246,6 @@ void *malloc(size_t size){
 		    arena->bins[UNSORTED_IDX] = NULL;
 
 	    // paranoia check
-	    if (arena->bins[UNSORTED_IDX] < arena)
-		arena->bins[UNSORTED_IDX] = NULL;
 	    if (arena->bins[UNSORTED_IDX])
 		    arena->bins[UNSORTED_IDX]->bk = NULL;
 
@@ -290,54 +302,9 @@ void *malloc(size_t size){
     }
 }
 
-
-static chunk *free_merge_chunk(chunk *selected){
-	chunk *merged = NULL;
- 
-	// backward merge: check if the previous chunk is free (PREV_MASK clear) hh
-	if (!is_prev(selected) && selected->prev_size != 0){
-		chunk    *prev_vict = prevchunk(selected);
-		size_t    nsize;
-		unlink_all(prev_vict);
-		nsize = sizenomask(prev_vict->size) + sizenomask(selected->size) + CHNK_HDR_SZ;
-		prev_vict->size = nsize | (prev_vict->size & ALL_MASKS);
-		// re-link the merged chunk at the head of the unsorted bin
-		// (the original selected was already inserted before this call)
-		// update the unsorted bin head if selected was there
-		if (arena->bins[UNSORTED_IDX] == selected)
-			arena->bins[UNSORTED_IDX] = prev_vict;
-		else if (selected->bk)
-			selected->bk->fd = prev_vict;
-		prev_vict->fd = selected->fd;
-		prev_vict->bk = selected->bk;
-		if (selected->fd)
-			selected->fd->bk = prev_vict;
-		if (nextchunk(prev_vict) < arena->wild)
-			nextchunk(prev_vict)->prev_size = sizenomask(prev_vict->size);
-		selected = prev_vict;
-		merged = selected;
-	}
- 
-	// forward merge: if the next chunk is free (its PREV_MASK is clear in
-	// the chunk after it, meaning next is free)
-	chunk *nxt = nextchunk(selected);
-	if (nxt < arena->wild && !is_prev(nxt)){
-		size_t nsize;
-		unlink_all(nxt);
-		nsize = sizenomask(selected->size) + sizenomask(nxt->size) + CHNK_HDR_SZ;
-		selected->size = nsize | (selected->size & ALL_MASKS);
-		if (nextchunk(selected) < arena->wild)
-			nextchunk(selected)->prev_size = sizenomask(selected->size);
-		merged = selected;
-	}
- 
-	return (merged);
-}
-
-
 void free(void *p){
-    chunk *vict = NULL;
     chunk *selected ;
+    size_t size;
 
     if (p == NULL)
 	return;
@@ -348,37 +315,21 @@ void free(void *p){
 	return;
     }
 
+    size = sizenomask(selected->size);
+    if (fastbin_range(size)) {
+    	    int idx = fastidx(size);
+    	    selected->fd = PROTECT_PTR(&arena->fastbin[idx], arena->fastbin[idx]);
+    	    arena->fastbin[idx] = selected;
+    	    return;
+    }
 
-    // if the next chunk is the wild we consolidate
+    selected = merge_free_chunk(selected);
+
     if (nextchunk(selected) == arena->wild) {
-	size_t new_wild_size = sizenomask(arena->wild->size) + sizenomask(selected->size) + CHNK_HDR_SZ;
-	arena->wild = selected;
-	arena->wild->size = new_wild_size | (selected->size & ALL_MASKS);
-	return;
+    	    size = sizenomask(arena->wild->size) + sizenomask(selected->size) + CHNK_HDR_SZ;
+    	    arena->wild = selected;
+    	    arena->wild->size = size | (selected->size & ALL_MASKS);
+    	    return;
     }
-    if (fastbin_range(sizenomask(selected->size))){
-	int idx = fastidx(sizenomask(selected->size));
-	selected->fd = PROTECT_PTR(&arena->fastbin[idx], arena->fastbin[idx]);
-	arena->fastbin[idx] = selected;
-	nextchunk(selected)->size &= ~PREV_MASK;		// removing the mask from the next chunk
-    } else if (!is_mmaped(selected)) {
-	/* 
-	 * if the victim chunk is gonna be inserted to either [large/small]bins
-	 * we must merge it with it's free neighbors
-	 */
-	nextchunk(selected)->size &= ~PREV_MASK;
-	nextchunk(selected)->prev_size = sizenomask(selected->size);
-	// we have no time to check the size of that chunk so we throw it in unsorted bins
-	// at the moment unsorted bins are not circular
-	// also there is no safe linking here
-	selected->fd = arena->bins[UNSORTED_IDX];
-	if (arena->bins[UNSORTED_IDX])
-	    arena->bins[UNSORTED_IDX]->bk = selected;
-	arena->bins[UNSORTED_IDX] = selected;
-
-	 
-	vict = free_merge_chunk(selected);
-	if (vict != NULL)
-		selected = vict;
-    }
+    insert_unsorted(selected);
 }

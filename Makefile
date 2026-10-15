@@ -1,7 +1,6 @@
 TARGET := genitor
 CC := gcc
-# CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto 
-CFLAGS := -ggdb  -O3 -flto \
+CFLAGS := -ggdb -Wall -Wextra -Werror -O3 -flto \
 	  -ffast-math -pedantic -fPIE -Iinc/    \
 	  -fno-stack-protector -fno-builtin \
 	  -nostdlib -static
